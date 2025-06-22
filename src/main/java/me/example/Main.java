@@ -2,6 +2,7 @@ package me.example;
 
 import me.bedtwL.ffa.api.EffectAddon;
 
+
 public class Main implements EffectAddon {
     @Override
     public String getName() {
