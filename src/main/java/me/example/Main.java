@@ -7,6 +7,8 @@ import java.util.UUID;
 
 public class Main implements EffectAddon {
     @Override
+    public Integer getAPIVer() {return 1;}
+    @Override
     public String getName() {
         return "Example";
     }
