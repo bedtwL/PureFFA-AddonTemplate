@@ -1,0 +1,65 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - master
+# e
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      - name: Get latest release number
+        id: get_release
+        run: |
+          latest=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest)
+          name=$(echo "$latest" | jq -r '.name')
+          echo "Latest release name: $name"
+          if [[ "$name" =~ Build\ ([0-9]+) ]]; then
+            count=$((BASH_REMATCH[1] + 1))
+          else
+            count=1
+          fi
+          echo "release_count=$count" >> $GITHUB_OUTPUT
+          echo "tag_name=build-${count}" >> $GITHUB_OUTPUT
+
+      - name: Find built JAR file
+        id: jar
+        run: |
+          jar_file=$(find target -type f -name "*.jar" | head -n 1)
+          echo "jar_path=$jar_file" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create_release
+        uses: comnoco/create-release-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_release.outputs.tag_name }}
+          release_name: Build ${{ steps.get_release.outputs.release_count }}
+          body: Automatic Build
+          draft: false
+          prerelease: false
+
+      - name: Upload JAR to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.jar.outputs.jar_path }}
+          asset_name: PureFFA-Rickrollkill.jar
+          asset_content_type: application/java-archive
